@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>生日祝福</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            touch-action: none;
+        }
+        body {
+            overflow: hidden;
+            background: #000;
+            font-family: 'Dancing Script', cursive;
+        }
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+        .message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #fff;
+            text-align: center;
+            z-index: 2;
+            pointer-events: none;
+        }
+        .text-3d {
+            text-shadow: 3px 3px 0 #ff3366,
+                        -1px -1px 0 #00ccff,
+                        1px -1px 0 #ff9933,
+                        -1px 1px 0 #9933ff;
+            animation: float 4s ease-in-out infinite;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <div class="message">
+        <p style="font-size: 5vw; margin-bottom: 2vh">🎂 陈宇 ✨</p>
+        <h1 class="text-3d" style="font-size: 8vw">Happy Birthday</h1>
+    </div>
+
+    <script>
+        class Particle3D {
+            constructor() {
+                this.reset();
+            }
+
+            reset() {
+                // 3D坐标
+                this.x = Math.random() * canvas.width - canvas.width/2;
+                this.y = Math.random() * canvas.height - canvas.height/2;
+                this.z = Math.random() * 2000 - 1000;
+                
+                // 运动参数
+                this.vx = Math.random() * 2 - 1;
+                this.vy = Math.random() * 2 - 1;
+                this.vz = Math.random() * 3;
+                
+                // 样式
+                this.size = Math.random() * 8 + 2;
+                this.color = `hsl(${Math.random()*360}, 70%, 60%)`;
+            }
+
+            update() {
+                // 3D运动
+                this.x += this.vx;
+                this.y += this.vy;
+                this.z += this.vz;
+
+                // 边界检测
+                if(this.z > 1000) {
+                    this.reset();
+                    this.z = -1000;
+                }
+
+                // 透视投影计算
+                const scale = 1000/(1000 - this.z);
+                this.sx = this.x * scale + canvas.width/2;
+                this.sy = this.y * scale + canvas.height/2;
+                this.scale = scale;
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.sx, this.sy);
+                ctx.scale(this.scale, this.scale);
+                
+                // 绘制3D爱心
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                for(let t = 0; t < Math.PI*2; t += 0.1) {
+                    const x = 16 * Math.pow(Math.sin(t), 3);
+                    const y = -13 * Math.cos(t) + 5*Math.cos(2*t) + 2*Math.cos(3*t) + Math.cos(4*t);
+                    ctx.lineTo(x, y);
+                }
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        const PARTICLE_COUNT = 200;
+        let beta = 0;
+        let gamma = 0;
+
+        // 初始化
+        function init() {
+            resizeCanvas();
+            createParticles();
+            addEventListeners();
+            animate();
+        }
+
+        // 创建3D粒子
+        function createParticles() {
+            for(let i = 0; i < PARTICLE_COUNT; i++) {
+                particles.push(new Particle3D());
+            }
+        }
+
+        // 响应式布局
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        // 动画循环
+        function animate() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            particles.forEach(particle => {
+                // 添加陀螺仪影响
+                particle.x += Math.sin(gamma * Math.PI/180) * 2;
+                particle.y += Math.sin(beta * Math.PI/180) * 2;
+                
+                particle.update();
+                particle.draw(ctx);
+            });
+
+            requestAnimationFrame(animate);
+        }
+
+        // 事件监听
+        function addEventListeners() {
+            window.addEventListener('resize', resizeCanvas);
+            window.addEventListener('deviceorientation', handleOrientation);
+            
+            // 移动端触摸事件
+            let touchTimer;
+            canvas.addEventListener('touchstart', (e) => {
+                touchTimer = setTimeout(() => {
+                    particles = particles.concat(new Array(20).fill().map(() => new Particle3D()));
+                }, 500);
+            });
+            
+            canvas.addEventListener('touchend', () => clearTimeout(touchTimer));
+        }
+
+        // 处理陀螺仪数据
+        function handleOrientation(event) {
+            beta = event.beta;  // 前后倾斜
+            gamma = event.gamma; // 左右倾斜
+        }
+
+        // 启动
+        init();
+    </script>
+</body>
+</html>
